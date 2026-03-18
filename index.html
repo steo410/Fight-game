@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Circle Fighter Arena</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="panel controls">
+        <h1>Circle Fighter Arena</h1>
+        <p class="intro">
+          이름을 입력해 전투 구체를 소환하세요. 체력은 100, 공격력은 10이 기본이며,
+          추가 수치를 더할 수 있습니다.
+        </p>
+
+        <form id="spawn-form" class="spawn-form">
+          <label>
+            이름
+            <input id="name-input" name="name" type="text" maxlength="16" placeholder="예: 돌진왕" required />
+          </label>
+          <label>
+            체력 추가
+            <input id="hp-input" name="hpBonus" type="number" value="0" min="0" max="900" step="10" />
+          </label>
+          <label>
+            공격 추가
+            <input id="atk-input" name="atkBonus" type="number" value="0" min="0" max="90" step="1" />
+          </label>
+          <button type="submit">원이름 소환</button>
+        </form>
+
+        <section class="tips">
+          <h2>조작</h2>
+          <ul>
+            <li><kbd>Tab</kbd> / 클릭: 조작할 원 선택</li>
+            <li><kbd>W</kbd> 또는 <kbd>↑</kbd>: 앞 방향으로 이동</li>
+            <li><kbd>A</kbd>/<kbd>D</kbd> 또는 <kbd>←</kbd>/<kbd>→</kbd>: 회전</li>
+            <li><kbd>Space</kbd>: 전방 반원 공격</li>
+          </ul>
+          <p>
+            뒤로는 이동할 수 없고, 반대 방향으로 가려면 180도 회전해야 합니다.
+            회전하면서 동시에 전진할 수 있습니다.
+          </p>
+        </section>
+
+        <section class="legend">
+          <h2>규칙</h2>
+          <ul>
+            <li>원 전체 둘레가 근접 공격 거리입니다.</li>
+            <li>전방 반원 안에 들어온 대상만 피해를 줍니다.</li>
+            <li>체력이 줄수록 원 색이 흰색에서 검정색으로 변합니다.</li>
+            <li>체력이 0이 되면 원이 폭발하며 사라집니다.</li>
+          </ul>
+        </section>
+      </aside>
+
+      <main class="panel arena-panel">
+        <div class="hud">
+          <div>
+            <strong>선택된 원:</strong>
+            <span id="selected-name">없음</span>
+          </div>
+          <div id="selected-stats">소환 후 원을 클릭하거나 Tab으로 선택하세요.</div>
+        </div>
+        <canvas id="arena" width="960" height="640" aria-label="Circle Fighter arena"></canvas>
+      </main>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
