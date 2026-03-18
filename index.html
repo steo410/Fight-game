@@ -11,39 +11,59 @@
       <aside class="panel side-panel">
         <h1>Mono Circle Arena</h1>
         <p class="intro">
-          처음 시작하면 아무 원도 없습니다. 이름과 추가 스탯을 입력하면 원이 생성되고,
-          추가 스탯은 체력과 공격에 무작위로 나뉩니다.
+          공을 바로 생성하지 않고 대기열에 먼저 모은 뒤, <strong>시작</strong> 버튼을 누르면
+          한 번에 경기장에 들어갑니다.
         </p>
 
-        <form id="spawn-form" class="spawn-form">
+        <form id="queue-form" class="spawn-form">
           <div class="inline-fields">
             <label class="grow">
               이름
-              <input id="name-input" name="name" type="text" maxlength="16" placeholder="예: 번개" required />
+              <input id="name-input" name="name" type="text" maxlength="16" placeholder="예: 빛" required />
             </label>
             <label class="bonus-field">
               추가 스탯
               <input id="bonus-input" name="bonus" type="number" value="0" min="0" max="99" step="1" />
             </label>
           </div>
-          <button type="submit">원 생성</button>
+          <div class="button-row">
+            <button type="submit">대기열 추가</button>
+            <button type="button" id="start-button">시작</button>
+          </div>
         </form>
+
+        <section class="speed-box">
+          <h2>배속</h2>
+          <div class="speed-buttons" id="speed-buttons">
+            <button type="button" class="speed-button active" data-speed="1">1x</button>
+            <button type="button" class="speed-button" data-speed="1.5">1.5x</button>
+            <button type="button" class="speed-button" data-speed="2">2x</button>
+            <button type="button" class="speed-button" data-speed="3">3x</button>
+          </div>
+        </section>
 
         <section class="rule-box">
           <h2>규칙</h2>
           <ul>
             <li>기본 스탯은 항상 체력 100, 공격 10입니다.</li>
             <li>추가 스탯은 무작위로 체력/공격에 분배됩니다.</li>
-            <li>체력에 배정된 수치는 10배가 되어 최대 체력에 더해집니다.</li>
-            <li>원은 스스로 움직이고, 벽이나 다른 원에 닿으면 튕깁니다.</li>
-            <li>원 색은 흰색에서 검정색으로만 변합니다.</li>
+            <li>체력 쪽으로 간 추가 스탯은 10배가 되어 최대 체력에 더해집니다.</li>
+            <li>원은 스스로 움직이며 벽이나 다른 원에 닿으면 튕깁니다.</li>
+            <li>공격 반원끼리 맞닿으면 서로 동시에 피해를 줄 수 있습니다.</li>
+          </ul>
+        </section>
+
+        <section class="list-box">
+          <h2>시작 대기열</h2>
+          <ul id="queue-list" class="info-list empty-list">
+            <li>아직 대기 중인 공이 없습니다.</li>
           </ul>
         </section>
 
         <section class="list-box">
           <h2>현재 원</h2>
           <ul id="live-list" class="info-list empty-list">
-            <li>아직 생성된 원이 없습니다.</li>
+            <li>아직 경기장에 나온 원이 없습니다.</li>
           </ul>
         </section>
 
@@ -58,7 +78,7 @@
       <main class="panel arena-panel">
         <div class="arena-header">
           <strong>자동 전투장</strong>
-          <span>입력 후 생성된 원들이 자동으로 이동하고 충돌하며 싸웁니다.</span>
+          <span>대기열에 여러 공을 넣고 시작 버튼으로 한 번에 입장시킨 뒤, 배속으로 속도를 조절하세요.</span>
         </div>
         <canvas id="arena" width="980" height="660" aria-label="Mono Circle Arena"></canvas>
       </main>
