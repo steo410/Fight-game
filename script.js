@@ -1,10 +1,14 @@
 const canvas = document.getElementById('arena');
 const ctx = canvas.getContext('2d');
-const form = document.getElementById('spawn-form');
+const queueForm = document.getElementById('queue-form');
+const startButton = document.getElementById('start-button');
+const speedButtons = document.getElementById('speed-buttons');
+const queueListEl = document.getElementById('queue-list');
 const liveListEl = document.getElementById('live-list');
 const deathListEl = document.getElementById('death-list');
 
 const fighters = [];
+const pendingQueue = [];
 const explosions = [];
 const deathOrder = [];
 
@@ -12,15 +16,15 @@ const CONFIG = {
   baseHp: 100,
   baseAtk: 10,
   radius: 34,
-  moveSpeed: 150,
-  attackCooldown: 0.72,
+  moveSpeed: 205,
+  attackCooldown: 0.62,
   collisionPadding: 2,
-  attackReach: 1.9,
 };
 
 let lastTime = performance.now();
 let nextId = 1;
 let spawnIndex = 0;
+let speedMultiplier = 1;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -53,45 +57,76 @@ function randomBonusDistribution(totalBonus) {
   return { hpUnits, atkUnits };
 }
 
-function createFighter(name, totalBonus) {
-  const spawn = randomSpawnPosition();
+function queueFighter(name, totalBonus) {
   const bonus = randomBonusDistribution(totalBonus);
-  const maxHp = CONFIG.baseHp + bonus.hpUnits * 10;
-  const atk = CONFIG.baseAtk + bonus.atkUnits;
-  const angle = Math.random() * Math.PI * 2;
-
-  fighters.push({
-    id: nextId++,
+  pendingQueue.push({
     name,
     totalBonus,
     hpUnits: bonus.hpUnits,
     atkUnits: bonus.atkUnits,
-    x: spawn.x,
-    y: spawn.y,
-    angle,
-    vx: Math.cos(angle) * CONFIG.moveSpeed,
-    vy: Math.sin(angle) * CONFIG.moveSpeed,
-    radius: CONFIG.radius,
-    maxHp,
-    hp: maxHp,
-    atk,
-    cooldown: Math.random() * 0.3,
-    alive: true,
+    maxHp: CONFIG.baseHp + bonus.hpUnits * 10,
+    atk: CONFIG.baseAtk + bonus.atkUnits,
   });
+  renderLists();
+}
 
+function deployQueuedFighters() {
+  if (pendingQueue.length === 0) {
+    return;
+  }
+
+  fighters.length = 0;
+  deathOrder.length = 0;
+  explosions.length = 0;
+  spawnIndex = 0;
+
+  for (const queued of pendingQueue) {
+    const spawn = randomSpawnPosition();
+    const angle = Math.random() * Math.PI * 2;
+
+    fighters.push({
+      id: nextId++,
+      name: queued.name,
+      totalBonus: queued.totalBonus,
+      hpUnits: queued.hpUnits,
+      atkUnits: queued.atkUnits,
+      x: spawn.x,
+      y: spawn.y,
+      angle,
+      vx: Math.cos(angle) * CONFIG.moveSpeed,
+      vy: Math.sin(angle) * CONFIG.moveSpeed,
+      radius: CONFIG.radius,
+      maxHp: queued.maxHp,
+      hp: queued.maxHp,
+      atk: queued.atk,
+      cooldown: Math.random() * 0.2,
+      alive: true,
+    });
+  }
+
+  pendingQueue.length = 0;
   renderLists();
 }
 
 function renderLists() {
-  const living = fighters.filter((fighter) => fighter.alive);
+  if (pendingQueue.length === 0) {
+    queueListEl.classList.add('empty-list');
+    queueListEl.innerHTML = '<li>아직 대기 중인 공이 없습니다.</li>';
+  } else {
+    queueListEl.classList.remove('empty-list');
+    queueListEl.innerHTML = pendingQueue
+      .map((fighter, index) => `<li>${index + 1}. ${fighter.name} · 체력 ${fighter.maxHp} · 공격 ${fighter.atk} · 추가스탯 ${fighter.totalBonus} (체력 ${fighter.hpUnits}, 공격 ${fighter.atkUnits})</li>`)
+      .join('');
+  }
 
+  const living = fighters.filter((fighter) => fighter.alive);
   if (living.length === 0) {
     liveListEl.classList.add('empty-list');
-    liveListEl.innerHTML = '<li>아직 생성된 원이 없습니다.</li>';
+    liveListEl.innerHTML = '<li>아직 경기장에 나온 원이 없습니다.</li>';
   } else {
     liveListEl.classList.remove('empty-list');
     liveListEl.innerHTML = living
-      .map((fighter) => `<li>${fighter.name} · 체력 ${Math.ceil(fighter.hp)}/${fighter.maxHp} · 공격 ${fighter.atk} · 추가스탯 ${fighter.totalBonus} (체력 ${fighter.hpUnits}, 공격 ${fighter.atkUnits})</li>`)
+      .map((fighter) => `<li>${fighter.name} · 체력 ${Math.ceil(fighter.hp)}/${fighter.maxHp} · 공격 ${fighter.atk}</li>`)
       .join('');
   }
 
@@ -111,7 +146,6 @@ function explode(fighter) {
   fighter.hp = 0;
   deathOrder.push(fighter.name);
   explosions.push({ x: fighter.x, y: fighter.y, age: 0, baseRadius: fighter.radius });
-  renderLists();
 }
 
 function reflectAgainstWalls(fighter) {
@@ -175,59 +209,80 @@ function resolveFighterCollisions() {
   }
 }
 
-function frontVector(angle) {
-  return { x: Math.cos(angle), y: Math.sin(angle) };
+function isTargetInFront(attacker, target) {
+  const dx = target.x - attacker.x;
+  const dy = target.y - attacker.y;
+  const distance = Math.hypot(dx, dy) || 1;
+  const facingX = Math.cos(attacker.angle);
+  const facingY = Math.sin(attacker.angle);
+  const alignment = (dx / distance) * facingX + (dy / distance) * facingY;
+  return alignment >= 0;
 }
 
-function tryAttack(attacker) {
-  if (!attacker.alive || attacker.cooldown > 0) {
-    return;
+function resolveCombat() {
+  const damageMap = new Map();
+
+  for (let i = 0; i < fighters.length; i += 1) {
+    const a = fighters[i];
+    if (!a.alive) continue;
+
+    for (let j = i + 1; j < fighters.length; j += 1) {
+      const b = fighters[j];
+      if (!b.alive) continue;
+
+      const distance = Math.hypot(b.x - a.x, b.y - a.y);
+      const contactRange = a.radius + b.radius + 2;
+      if (distance > contactRange) continue;
+
+      const aCanAttack = a.cooldown <= 0 && isTargetInFront(a, b);
+      const bCanAttack = b.cooldown <= 0 && isTargetInFront(b, a);
+      if (!aCanAttack && !bCanAttack) continue;
+
+      if (aCanAttack) {
+        damageMap.set(b.id, (damageMap.get(b.id) || 0) + a.atk);
+        a.cooldown = CONFIG.attackCooldown;
+      }
+
+      if (bCanAttack) {
+        damageMap.set(a.id, (damageMap.get(a.id) || 0) + b.atk);
+        b.cooldown = CONFIG.attackCooldown;
+      }
+    }
   }
 
-  attacker.cooldown = CONFIG.attackCooldown;
-  const facing = frontVector(attacker.angle);
-  const range = attacker.radius * CONFIG.attackReach + attacker.radius;
+  for (const fighter of fighters) {
+    if (!fighter.alive) continue;
+    const damage = damageMap.get(fighter.id);
+    if (!damage) continue;
+    fighter.hp = clamp(fighter.hp - damage, 0, fighter.maxHp);
+  }
 
-  for (const target of fighters) {
-    if (!target.alive || target.id === attacker.id) continue;
-
-    const dx = target.x - attacker.x;
-    const dy = target.y - attacker.y;
-    const distance = Math.hypot(dx, dy);
-    if (distance > range) continue;
-
-    const alignment = ((dx / (distance || 1)) * facing.x) + ((dy / (distance || 1)) * facing.y);
-    if (alignment < 0) continue;
-
-    target.hp = clamp(target.hp - attacker.atk, 0, target.maxHp);
-    if (target.hp <= 0) {
-      explode(target);
+  for (const fighter of fighters) {
+    if (fighter.alive && fighter.hp <= 0) {
+      explode(fighter);
     }
   }
 }
 
 function update(dt) {
+  const scaledDt = dt * speedMultiplier;
+
   for (const fighter of fighters) {
     if (!fighter.alive) continue;
 
-    fighter.cooldown = Math.max(0, fighter.cooldown - dt);
-    fighter.x += fighter.vx * dt;
-    fighter.y += fighter.vy * dt;
+    fighter.cooldown = Math.max(0, fighter.cooldown - scaledDt);
+    fighter.x += fighter.vx * scaledDt;
+    fighter.y += fighter.vy * scaledDt;
 
     reflectAgainstWalls(fighter);
     fighter.angle = normalizeAngle(Math.atan2(fighter.vy, fighter.vx));
   }
 
   resolveFighterCollisions();
-
-  for (const fighter of fighters) {
-    if (fighter.alive) {
-      tryAttack(fighter);
-    }
-  }
+  resolveCombat();
 
   for (let i = explosions.length - 1; i >= 0; i -= 1) {
-    explosions[i].age += dt;
+    explosions[i].age += scaledDt;
     if (explosions[i].age > 0.5) {
       explosions.splice(i, 1);
     }
@@ -306,13 +361,13 @@ function render() {
 
   drawExplosions();
 
-  if (fighters.length === 0) {
+  if (fighters.filter((fighter) => fighter.alive).length === 0) {
     ctx.fillStyle = 'rgba(255,255,255,0.85)';
     ctx.font = '700 28px Pretendard, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('이름과 추가 스탯을 입력하면 원이 생성됩니다.', canvas.width / 2, canvas.height / 2 - 10);
+    ctx.fillText('대기열에 공을 추가한 뒤 시작 버튼을 눌러주세요.', canvas.width / 2, canvas.height / 2 - 10);
     ctx.font = '500 18px Pretendard, sans-serif';
-    ctx.fillText('기본 스탯은 체력 100, 공격 10이며 추가 스탯은 무작위 분배됩니다.', canvas.width / 2, canvas.height / 2 + 28);
+    ctx.fillText('배속 버튼으로 이동 속도를 즉시 높일 수 있습니다.', canvas.width / 2, canvas.height / 2 + 28);
   }
 }
 
@@ -324,15 +379,28 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-form.addEventListener('submit', (event) => {
+queueForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const name = document.getElementById('name-input').value.trim();
   const totalBonus = clamp(Number(document.getElementById('bonus-input').value) || 0, 0, 99);
   if (!name) return;
 
-  createFighter(name, totalBonus);
-  form.reset();
+  queueFighter(name, totalBonus);
+  queueForm.reset();
   document.getElementById('bonus-input').value = '0';
+});
+
+startButton.addEventListener('click', () => {
+  deployQueuedFighters();
+});
+
+speedButtons.addEventListener('click', (event) => {
+  const button = event.target.closest('.speed-button');
+  if (!button) return;
+
+  speedMultiplier = Number(button.dataset.speed) || 1;
+  document.querySelectorAll('.speed-button').forEach((item) => item.classList.remove('active'));
+  button.classList.add('active');
 });
 
 renderLists();
