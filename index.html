@@ -12,7 +12,7 @@
         <h1>Mono Circle Arena</h1>
         <p class="intro">
           공을 바로 생성하지 않고 대기열에 먼저 모은 뒤, <strong>시작</strong> 버튼을 누르면
-          한 번에 경기장에 들어갑니다.
+          한 번에 경기장에 들어갑니다. 시작 전에는 대기열에서 이름과 추가 스탯을 다시 수정할 수 있습니다.
         </p>
 
         <form id="queue-form" class="spawn-form">
@@ -26,8 +26,10 @@
               <input id="bonus-input" name="bonus" type="number" value="0" min="0" max="99" step="1" />
             </label>
           </div>
-          <div class="button-row">
-            <button type="submit">대기열 추가</button>
+          <p id="edit-status" class="edit-status">현재는 새 공을 대기열에 추가하는 모드입니다.</p>
+          <div class="button-row wrap-row">
+            <button type="submit" id="queue-submit-button">대기열 추가</button>
+            <button type="button" id="cancel-edit-button" class="ghost-button" disabled>수정 취소</button>
             <button type="button" id="start-button">시작</button>
           </div>
         </form>
@@ -55,7 +57,7 @@
 
         <section class="list-box">
           <h2>시작 대기열</h2>
-          <ul id="queue-list" class="info-list empty-list">
+          <ul id="queue-list" class="queue-list info-list empty-list">
             <li>아직 대기 중인 공이 없습니다.</li>
           </ul>
         </section>
