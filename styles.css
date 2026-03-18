@@ -1,12 +1,12 @@
 :root {
   color-scheme: dark;
-  --bg: #0f1117;
-  --panel: rgba(22, 26, 35, 0.9);
-  --border: rgba(255, 255, 255, 0.1);
-  --accent: #6ea8ff;
-  --text: #f5f7fb;
-  --muted: #a9b1c6;
-  --danger: #ff7878;
+  --bg: #111111;
+  --panel: rgba(28, 28, 28, 0.96);
+  --panel-strong: rgba(14, 14, 14, 0.98);
+  --border: rgba(255, 255, 255, 0.12);
+  --text: #f3f3f3;
+  --muted: #bdbdbd;
+  --soft: #1f1f1f;
 }
 
 * {
@@ -17,29 +17,26 @@ body {
   margin: 0;
   min-height: 100vh;
   font-family: "Pretendard", "Noto Sans KR", system-ui, sans-serif;
-  background:
-    radial-gradient(circle at top, #24304d 0%, rgba(36, 48, 77, 0.2) 30%, transparent 55%),
-    linear-gradient(135deg, #07080b, #111722 60%, #090d14);
+  background: radial-gradient(circle at top, #262626 0%, #111111 38%, #050505 100%);
   color: var(--text);
 }
 
 .app-shell {
   display: grid;
-  grid-template-columns: minmax(300px, 360px) 1fr;
+  grid-template-columns: minmax(320px, 380px) 1fr;
   gap: 20px;
   min-height: 100vh;
   padding: 20px;
 }
 
 .panel {
-  border: 1px solid var(--border);
-  border-radius: 20px;
   background: var(--panel);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
 }
 
-.controls {
+.side-panel {
   padding: 24px;
 }
 
@@ -49,17 +46,22 @@ h2 {
 }
 
 .intro,
-.legend,
-.tips,
-#selected-stats {
+.rule-box,
+.arena-header span,
+.info-list {
   color: var(--muted);
-  line-height: 1.6;
+  line-height: 1.65;
 }
 
 .spawn-form {
   display: grid;
   gap: 14px;
-  margin: 24px 0;
+  margin: 22px 0 26px;
+}
+
+.inline-fields {
+  display: flex;
+  gap: 12px;
 }
 
 label {
@@ -68,41 +70,60 @@ label {
   font-weight: 600;
 }
 
+.grow {
+  flex: 1;
+}
+
+.bonus-field {
+  width: 120px;
+}
+
 input,
 button {
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  width: 100%;
   border-radius: 12px;
+  border: 1px solid var(--border);
   padding: 12px 14px;
   font: inherit;
 }
 
 input {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text);
 }
 
 button {
   cursor: pointer;
-  background: linear-gradient(135deg, #6ea8ff, #8f7dff);
-  color: white;
-  font-weight: 700;
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  background: linear-gradient(180deg, #fafafa, #bdbdbd);
+  color: #111111;
+  font-weight: 800;
 }
 
-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 25px rgba(110, 168, 255, 0.35);
+.rule-box,
+.list-box {
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--soft);
+  margin-bottom: 16px;
 }
 
-ul {
+ul,
+ol {
   padding-left: 20px;
+  margin-bottom: 0;
 }
 
-kbd {
-  border-radius: 6px;
-  padding: 2px 6px;
-  background: rgba(255, 255, 255, 0.12);
-  font-size: 0.9em;
+.info-list {
+  margin-top: 0;
+}
+
+.info-list li + li {
+  margin-top: 8px;
+}
+
+.empty-list {
+  font-style: italic;
 }
 
 .arena-panel {
@@ -111,34 +132,37 @@ kbd {
   padding: 18px;
 }
 
-.hud {
+.arena-header {
   display: flex;
   justify-content: space-between;
   gap: 16px;
   align-items: center;
   padding: 6px 8px 16px;
-  font-size: 0.95rem;
 }
 
 #arena {
   width: 100%;
   height: auto;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   background:
     linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px),
-    radial-gradient(circle at center, rgba(73, 86, 121, 0.2), rgba(6, 9, 15, 0.95));
-  background-size: 48px 48px, 48px 48px, auto;
+    radial-gradient(circle at center, #262626, #090909 70%);
+  background-size: 44px 44px, 44px 44px, auto;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1120px) {
   .app-shell {
     grid-template-columns: 1fr;
   }
 
-  .hud {
+  .arena-header,
+  .inline-fields {
     flex-direction: column;
-    align-items: flex-start;
+  }
+
+  .bonus-field {
+    width: 100%;
   }
 }
