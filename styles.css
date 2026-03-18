@@ -1,8 +1,6 @@
 :root {
   color-scheme: dark;
-  --bg: #111111;
   --panel: rgba(28, 28, 28, 0.96);
-  --panel-strong: rgba(14, 14, 14, 0.98);
   --border: rgba(255, 255, 255, 0.12);
   --text: #f3f3f3;
   --muted: #bdbdbd;
@@ -23,7 +21,7 @@ body {
 
 .app-shell {
   display: grid;
-  grid-template-columns: minmax(320px, 380px) 1fr;
+  grid-template-columns: minmax(320px, 390px) 1fr;
   gap: 20px;
   min-height: 100vh;
   padding: 20px;
@@ -56,10 +54,12 @@ h2 {
 .spawn-form {
   display: grid;
   gap: 14px;
-  margin: 22px 0 26px;
+  margin: 22px 0 20px;
 }
 
-.inline-fields {
+.inline-fields,
+.button-row,
+.speed-buttons {
   display: flex;
   gap: 12px;
 }
@@ -99,6 +99,7 @@ button {
   font-weight: 800;
 }
 
+.speed-box,
 .rule-box,
 .list-box {
   padding: 16px 18px;
@@ -106,6 +107,11 @@ button {
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: var(--soft);
   margin-bottom: 16px;
+}
+
+.speed-button.active {
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  outline-offset: 1px;
 }
 
 ul,
@@ -158,7 +164,9 @@ ol {
   }
 
   .arena-header,
-  .inline-fields {
+  .inline-fields,
+  .button-row,
+  .speed-buttons {
     flex-direction: column;
   }
 
