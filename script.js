@@ -64,8 +64,9 @@ function updateRowRemoveButtons() {
   const rows = fighterRowsEl.querySelectorAll('.fighter-row');
   rows.forEach((row, index) => {
     const removeButton = row.querySelector('.remove-row-button');
+    removeButton.hidden = rows.length <= CONFIG.minRows;
     removeButton.disabled = rows.length <= CONFIG.minRows;
-    removeButton.textContent = rows.length <= CONFIG.minRows ? `기본 입력칸 ${index + 1}` : '삭제';
+    removeButton.textContent = '삭제';
   });
 }
 
