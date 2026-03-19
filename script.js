@@ -1,19 +1,15 @@
 const canvas = document.getElementById('arena');
 const ctx = canvas.getContext('2d');
-const queueForm = document.getElementById('queue-form');
-const startButton = document.getElementById('start-button');
-const cancelEditButton = document.getElementById('cancel-edit-button');
-const queueSubmitButton = document.getElementById('queue-submit-button');
-const editStatus = document.getElementById('edit-status');
-const speedButtons = document.getElementById('speed-buttons');
-const queueListEl = document.getElementById('queue-list');
+const fighterForm = document.getElementById('fighter-form');
+const fighterRowsEl = document.getElementById('fighter-rows');
+const addRowButton = document.getElementById('add-row-button');
+const speedSlider = document.getElementById('speed-slider');
+const speedLabel = document.getElementById('speed-label');
 const liveListEl = document.getElementById('live-list');
 const deathListEl = document.getElementById('death-list');
-const nameInput = document.getElementById('name-input');
-const bonusInput = document.getElementById('bonus-input');
+const rowTemplate = document.getElementById('fighter-row-template');
 
 const fighters = [];
-const pendingQueue = [];
 const explosions = [];
 const deathOrder = [];
 
@@ -21,16 +17,17 @@ const CONFIG = {
   baseHp: 100,
   baseAtk: 10,
   radius: 34,
-  moveSpeed: 205,
+  moveSpeed: 410,
   attackCooldown: 0.62,
   collisionPadding: 2,
+  minRows: 2,
 };
 
 let lastTime = performance.now();
 let nextId = 1;
 let spawnIndex = 0;
 let speedMultiplier = 1;
-let editingQueueId = null;
+let nextDraftId = 1;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -63,71 +60,72 @@ function randomBonusDistribution(totalBonus) {
   return { hpUnits, atkUnits };
 }
 
-function buildQueuedFighter(name, totalBonus, existingId = null) {
-  const bonus = randomBonusDistribution(totalBonus);
+function updateRowRemoveButtons() {
+  const rows = fighterRowsEl.querySelectorAll('.fighter-row');
+  rows.forEach((row, index) => {
+    const removeButton = row.querySelector('.remove-row-button');
+    removeButton.disabled = rows.length <= CONFIG.minRows;
+    removeButton.textContent = rows.length <= CONFIG.minRows ? `기본 입력칸 ${index + 1}` : '삭제';
+  });
+}
+
+function createInputRow(initialName = '', initialBonus = 0) {
+  const fragment = rowTemplate.content.cloneNode(true);
+  const row = fragment.querySelector('.fighter-row');
+  row.dataset.rowId = `draft-${nextDraftId++}`;
+
+  const nameInput = fragment.querySelector('.fighter-name');
+  const bonusInput = fragment.querySelector('.fighter-bonus');
+  nameInput.value = initialName;
+  bonusInput.value = initialBonus;
+
+  fighterRowsEl.appendChild(fragment);
+  updateRowRemoveButtons();
+}
+
+function ensureInitialRows() {
+  fighterRowsEl.innerHTML = '';
+  createInputRow();
+  createInputRow();
+}
+
+function readDrafts() {
+  return [...fighterRowsEl.querySelectorAll('.fighter-row')]
+    .map((row) => ({
+      rowId: row.dataset.rowId,
+      name: row.querySelector('.fighter-name').value.trim(),
+      totalBonus: clamp(Number(row.querySelector('.fighter-bonus').value) || 0, 0, 99),
+    }))
+    .filter((fighter) => fighter.name.length > 0);
+}
+
+function buildFighterFromDraft(draft) {
+  const bonus = randomBonusDistribution(draft.totalBonus);
+  const spawn = randomSpawnPosition();
+  const angle = Math.random() * Math.PI * 2;
   return {
-    id: existingId ?? `queue-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    name,
-    totalBonus,
+    id: nextId++,
+    name: draft.name,
+    totalBonus: draft.totalBonus,
     hpUnits: bonus.hpUnits,
     atkUnits: bonus.atkUnits,
+    x: spawn.x,
+    y: spawn.y,
+    angle,
+    vx: Math.cos(angle) * CONFIG.moveSpeed,
+    vy: Math.sin(angle) * CONFIG.moveSpeed,
+    radius: CONFIG.radius,
     maxHp: CONFIG.baseHp + bonus.hpUnits * 10,
+    hp: CONFIG.baseHp + bonus.hpUnits * 10,
     atk: CONFIG.baseAtk + bonus.atkUnits,
+    cooldown: Math.random() * 0.2,
+    alive: true,
   };
 }
 
-function resetFormMode() {
-  editingQueueId = null;
-  queueSubmitButton.textContent = '대기열 추가';
-  cancelEditButton.disabled = true;
-  editStatus.textContent = '현재는 새 공을 대기열에 추가하는 모드입니다.';
-  queueForm.reset();
-  bonusInput.value = '0';
-}
-
-function loadQueueItemForEdit(queueId) {
-  const fighter = pendingQueue.find((item) => item.id === queueId);
-  if (!fighter) return;
-
-  editingQueueId = queueId;
-  nameInput.value = fighter.name;
-  bonusInput.value = fighter.totalBonus;
-  queueSubmitButton.textContent = '수정 저장';
-  cancelEditButton.disabled = false;
-  editStatus.textContent = `${fighter.name} 공을 수정 중입니다. 저장하면 스탯이 다시 무작위 배분됩니다.`;
-  renderLists();
-}
-
-function queueOrUpdateFighter(name, totalBonus) {
-  if (editingQueueId) {
-    const index = pendingQueue.findIndex((item) => item.id === editingQueueId);
-    if (index !== -1) {
-      pendingQueue[index] = buildQueuedFighter(name, totalBonus, editingQueueId);
-    }
-    resetFormMode();
-    renderLists();
-    return;
-  }
-
-  pendingQueue.push(buildQueuedFighter(name, totalBonus));
-  queueForm.reset();
-  bonusInput.value = '0';
-  renderLists();
-}
-
-function removeQueuedFighter(queueId) {
-  const index = pendingQueue.findIndex((item) => item.id === queueId);
-  if (index === -1) return;
-
-  pendingQueue.splice(index, 1);
-  if (editingQueueId === queueId) {
-    resetFormMode();
-  }
-  renderLists();
-}
-
-function deployQueuedFighters() {
-  if (pendingQueue.length === 0) {
+function deployDrafts() {
+  const drafts = readDrafts();
+  if (drafts.length === 0) {
     return;
   }
 
@@ -136,56 +134,14 @@ function deployQueuedFighters() {
   explosions.length = 0;
   spawnIndex = 0;
 
-  for (const queued of pendingQueue) {
-    const spawn = randomSpawnPosition();
-    const angle = Math.random() * Math.PI * 2;
-
-    fighters.push({
-      id: nextId++,
-      name: queued.name,
-      totalBonus: queued.totalBonus,
-      hpUnits: queued.hpUnits,
-      atkUnits: queued.atkUnits,
-      x: spawn.x,
-      y: spawn.y,
-      angle,
-      vx: Math.cos(angle) * CONFIG.moveSpeed,
-      vy: Math.sin(angle) * CONFIG.moveSpeed,
-      radius: CONFIG.radius,
-      maxHp: queued.maxHp,
-      hp: queued.maxHp,
-      atk: queued.atk,
-      cooldown: Math.random() * 0.2,
-      alive: true,
-    });
+  for (const draft of drafts) {
+    fighters.push(buildFighterFromDraft(draft));
   }
 
-  pendingQueue.length = 0;
-  resetFormMode();
   renderLists();
 }
 
 function renderLists() {
-  if (pendingQueue.length === 0) {
-    queueListEl.classList.add('empty-list');
-    queueListEl.innerHTML = '<li>아직 대기 중인 공이 없습니다.</li>';
-  } else {
-    queueListEl.classList.remove('empty-list');
-    queueListEl.innerHTML = pendingQueue
-      .map((fighter, index) => `
-        <li class="queue-item ${fighter.id === editingQueueId ? 'active-edit' : ''}">
-          <div class="queue-title">${index + 1}. ${fighter.name}</div>
-          <div>체력 ${fighter.maxHp} · 공격 ${fighter.atk}</div>
-          <div>추가스탯 ${fighter.totalBonus} (체력 ${fighter.hpUnits}, 공격 ${fighter.atkUnits})</div>
-          <div class="queue-actions">
-            <button type="button" class="ghost-button" data-action="edit" data-id="${fighter.id}">수정</button>
-            <button type="button" class="ghost-button" data-action="remove" data-id="${fighter.id}">삭제</button>
-          </div>
-        </li>
-      `)
-      .join('');
-  }
-
   const living = fighters.filter((fighter) => fighter.alive);
   if (living.length === 0) {
     liveListEl.classList.add('empty-list');
@@ -432,9 +388,9 @@ function render() {
     ctx.fillStyle = 'rgba(255,255,255,0.85)';
     ctx.font = '700 28px Pretendard, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('대기열에 공을 추가한 뒤 시작 버튼을 눌러주세요.', canvas.width / 2, canvas.height / 2 - 10);
+    ctx.fillText('왼쪽 입력칸에서 공 정보를 적고 시작을 눌러주세요.', canvas.width / 2, canvas.height / 2 - 10);
     ctx.font = '500 18px Pretendard, sans-serif';
-    ctx.fillText('대기열의 수정 버튼으로 시작 전 이름과 스탯을 바꿀 수 있습니다.', canvas.width / 2, canvas.height / 2 + 28);
+    ctx.fillText('추가 스탯으로 공격이 오르면 충돌 시 그 공격력만큼 체력이 즉시 줄어듭니다.', canvas.width / 2, canvas.height / 2 + 28);
   }
 }
 
@@ -446,47 +402,28 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-queueForm.addEventListener('submit', (event) => {
+fighterForm.addEventListener('submit', (event) => {
   event.preventDefault();
-  const name = nameInput.value.trim();
-  const totalBonus = clamp(Number(bonusInput.value) || 0, 0, 99);
-  if (!name) return;
-
-  queueOrUpdateFighter(name, totalBonus);
+  deployDrafts();
 });
 
-cancelEditButton.addEventListener('click', () => {
-  resetFormMode();
-  renderLists();
+addRowButton.addEventListener('click', () => {
+  createInputRow();
 });
 
-queueListEl.addEventListener('click', (event) => {
-  const button = event.target.closest('button[data-action]');
-  if (!button) return;
+fighterRowsEl.addEventListener('click', (event) => {
+  const removeButton = event.target.closest('.remove-row-button');
+  if (!removeButton || removeButton.disabled) return;
 
-  const { action, id } = button.dataset;
-  if (action === 'edit') {
-    loadQueueItemForEdit(id);
-  }
-
-  if (action === 'remove') {
-    removeQueuedFighter(id);
-  }
+  removeButton.closest('.fighter-row')?.remove();
+  updateRowRemoveButtons();
 });
 
-startButton.addEventListener('click', () => {
-  deployQueuedFighters();
+speedSlider.addEventListener('input', () => {
+  speedMultiplier = Number(speedSlider.value) || 1;
+  speedLabel.textContent = `${speedMultiplier.toFixed(1)}x`;
 });
 
-speedButtons.addEventListener('click', (event) => {
-  const button = event.target.closest('.speed-button');
-  if (!button) return;
-
-  speedMultiplier = Number(button.dataset.speed) || 1;
-  document.querySelectorAll('.speed-button').forEach((item) => item.classList.remove('active'));
-  button.classList.add('active');
-});
-
-resetFormMode();
+ensureInitialRows();
 renderLists();
 requestAnimationFrame(frame);
