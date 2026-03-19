@@ -21,7 +21,7 @@ body {
 
 .app-shell {
   display: grid;
-  grid-template-columns: minmax(320px, 390px) 1fr;
+  grid-template-columns: minmax(320px, 410px) 1fr;
   gap: 20px;
   min-height: 100vh;
   padding: 20px;
@@ -44,30 +44,49 @@ h2 {
 }
 
 .intro,
-.rule-box,
 .arena-header span,
 .info-list,
-.edit-status {
+.slider-hint {
   color: var(--muted);
   line-height: 1.65;
 }
 
-.spawn-form {
-  display: grid;
-  gap: 14px;
-  margin: 22px 0 20px;
+.input-box,
+.speed-box,
+.list-box {
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--soft);
+  margin-bottom: 16px;
 }
 
-.inline-fields,
-.button-row,
-.speed-buttons,
-.queue-actions {
+.section-header,
+.fighter-row-fields,
+.button-row {
   display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.section-header {
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.fighter-form,
+.fighter-rows {
+  display: grid;
   gap: 12px;
 }
 
-.wrap-row {
-  flex-wrap: wrap;
+.fighter-row {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 label {
@@ -105,29 +124,31 @@ button {
   font-weight: 800;
 }
 
-button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
 .ghost-button {
   background: linear-gradient(180deg, #3f3f3f, #2a2a2a);
   color: #f3f3f3;
 }
 
-.speed-box,
-.rule-box,
-.list-box {
-  padding: 16px 18px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: var(--soft);
-  margin-bottom: 16px;
+.icon-button {
+  width: 48px;
+  min-width: 48px;
+  padding: 10px 0;
+  font-size: 1.3rem;
 }
 
-.speed-button.active {
-  outline: 2px solid rgba(255, 255, 255, 0.85);
-  outline-offset: 1px;
+.remove-row-button {
+  width: auto;
+  justify-self: end;
+  padding-inline: 18px;
+}
+
+.slider-field {
+  display: grid;
+  gap: 8px;
+}
+
+#speed-slider {
+  padding: 0;
 }
 
 ul,
@@ -142,35 +163,6 @@ ol {
 
 .info-list li + li {
   margin-top: 8px;
-}
-
-.queue-list {
-  list-style: none;
-  padding-left: 0;
-}
-
-.queue-item {
-  padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.queue-item.active-edit {
-  border-color: rgba(255, 255, 255, 0.4);
-}
-
-.queue-title {
-  color: var(--text);
-  font-weight: 700;
-}
-
-.queue-actions {
-  margin-top: 10px;
-}
-
-.queue-actions button {
-  padding: 9px 12px;
 }
 
 .empty-list {
@@ -209,14 +201,13 @@ ol {
   }
 
   .arena-header,
-  .inline-fields,
-  .button-row,
-  .speed-buttons,
-  .queue-actions {
+  .fighter-row-fields,
+  .button-row {
     flex-direction: column;
   }
 
-  .bonus-field {
+  .bonus-field,
+  .remove-row-button {
     width: 100%;
   }
 }
