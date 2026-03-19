@@ -24,11 +24,13 @@ body {
   display: grid;
   grid-template-columns: minmax(320px, 410px) 1fr;
   gap: 20px;
-  height: 100vh;
+  height: calc(100vh - 40px);
+  min-height: 0;
   padding: 20px;
 }
 
 .panel {
+  min-height: 0;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 22px;
@@ -36,6 +38,7 @@ body {
 }
 
 .side-panel {
+  height: 100%;
   padding: 24px;
   overflow-y: auto;
 }
