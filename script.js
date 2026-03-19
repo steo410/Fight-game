@@ -14,8 +14,7 @@ const explosions = [];
 const deathOrder = [];
 
 const CONFIG = {
-  baseHp: 100,
-  baseAtk: 10,
+  totalStatPoints: 30,
   radius: 34,
   moveSpeed: 410,
   attackCooldown: 0.62,
@@ -54,9 +53,10 @@ function randomSpawnPosition() {
   };
 }
 
-function randomBonusDistribution(totalBonus) {
-  const hpUnits = Math.floor(Math.random() * (totalBonus + 1));
-  const atkUnits = totalBonus - hpUnits;
+function randomStatDistribution(totalPoints) {
+  const minimumHpUnits = 5;
+  const hpUnits = minimumHpUnits + Math.floor(Math.random() * (totalPoints - minimumHpUnits + 1));
+  const atkUnits = totalPoints - hpUnits;
   return { hpUnits, atkUnits };
 }
 
@@ -64,8 +64,8 @@ function updateRowRemoveButtons() {
   const rows = fighterRowsEl.querySelectorAll('.fighter-row');
   rows.forEach((row, index) => {
     const removeButton = row.querySelector('.remove-row-button');
-    removeButton.hidden = rows.length <= CONFIG.minRows;
     removeButton.disabled = rows.length <= CONFIG.minRows;
+    removeButton.hidden = rows.length <= CONFIG.minRows;
     removeButton.textContent = '삭제';
   });
 }
@@ -101,7 +101,8 @@ function readDrafts() {
 }
 
 function buildFighterFromDraft(draft) {
-  const bonus = randomBonusDistribution(draft.totalBonus);
+  const totalPoints = CONFIG.totalStatPoints + draft.totalBonus;
+  const bonus = randomStatDistribution(totalPoints);
   const spawn = randomSpawnPosition();
   const angle = Math.random() * Math.PI * 2;
   return {
@@ -116,9 +117,9 @@ function buildFighterFromDraft(draft) {
     vx: Math.cos(angle) * CONFIG.moveSpeed,
     vy: Math.sin(angle) * CONFIG.moveSpeed,
     radius: CONFIG.radius,
-    maxHp: CONFIG.baseHp + bonus.hpUnits * 10,
-    hp: CONFIG.baseHp + bonus.hpUnits * 10,
-    atk: CONFIG.baseAtk + bonus.atkUnits,
+    maxHp: bonus.hpUnits * 10,
+    hp: bonus.hpUnits * 10,
+    atk: bonus.atkUnits,
     cooldown: Math.random() * 0.2,
     alive: true,
   };
@@ -233,16 +234,6 @@ function resolveFighterCollisions() {
   }
 }
 
-function isTargetInFront(attacker, target) {
-  const dx = target.x - attacker.x;
-  const dy = target.y - attacker.y;
-  const distance = Math.hypot(dx, dy) || 1;
-  const facingX = Math.cos(attacker.angle);
-  const facingY = Math.sin(attacker.angle);
-  const alignment = (dx / distance) * facingX + (dy / distance) * facingY;
-  return alignment >= 0;
-}
-
 function resolveCombat() {
   const damageMap = new Map();
 
@@ -258,8 +249,8 @@ function resolveCombat() {
       const contactRange = a.radius + b.radius + 2;
       if (distance > contactRange) continue;
 
-      const aCanAttack = a.cooldown <= 0 && isTargetInFront(a, b);
-      const bCanAttack = b.cooldown <= 0 && isTargetInFront(b, a);
+      const aCanAttack = a.cooldown <= 0;
+      const bCanAttack = b.cooldown <= 0;
       if (!aCanAttack && !bCanAttack) continue;
 
       if (aCanAttack) {
@@ -391,7 +382,15 @@ function render() {
     ctx.textAlign = 'center';
     ctx.fillText('왼쪽 입력칸에서 공 정보를 적고 시작을 눌러주세요.', canvas.width / 2, canvas.height / 2 - 10);
     ctx.font = '500 18px Pretendard, sans-serif';
-    ctx.fillText('추가 스탯으로 공격이 오르면 충돌 시 그 공격력만큼 체력이 즉시 줄어듭니다.', canvas.width / 2, canvas.height / 2 + 28);
+    ctx.fillText('총 스탯은 경기 시작 후 공개되며, 공격 수치는 충돌 피해에 그대로 반영됩니다.', canvas.width / 2, canvas.height / 2 + 28);
+  }
+
+  const aliveFighters = fighters.filter((fighter) => fighter.alive);
+  if (aliveFighters.length === 1) {
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.font = '700 30px Pretendard, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`우승은 ${aliveFighters[0].name}`, canvas.width / 2, 48);
   }
 }
 
